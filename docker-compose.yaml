@@ -7,13 +7,9 @@ services:
     networks:
       - pdns-net
     volumes:
-      # Mount a named volume for persistent database files.
       - postgres-data:/var/lib/postgresql/data
-      # Mount the initialization script to create the PowerDNS schema on first run.
       - ./postgres/init:/docker-entrypoint-initdb.d/
     environment:
-      # These variables are used by the official Postgres image to initialize the database.
-      # Ensure these values match the gpgsql settings in pdns.conf.
       - POSTGRES_DB=powerdns
       - POSTGRES_USER=powerdns
       - POSTGRES_PASSWORD=powerdns
@@ -28,19 +24,17 @@ services:
         # Assign a static IP to this container
         ipv4_address: 172.28.0.10
     volumes:
-      # Mount the configuration file into the container.
       - ./pdns-auth/pdns.conf:/etc/powerdns/pdns.conf:ro
+      - pdns-run:/var/run/pdns
     command:
-      # Override the default command to specify the config file and other parameters.
       - --config-dir=/etc/powerdns
       - --socket-dir=/var/run/pdns
     ports:
-      # Expose the API port to the host for management (e.g., with PowerDNS-Admin).
       - "8081:8081"
 
   # 3. PowerDNS Recursor Service
   pdns-recursor:
-    image: powerdns/pdns-recursor-51 # Use a recent stable tag
+    image: powerdns/pdns-recursor-51 
     container_name: pdns-recursor
     restart: unless-stopped
     networks:
@@ -48,16 +42,15 @@ services:
     depends_on:
       - pdns-auth
     volumes:
-      # Mount the recursor configuration file.
       - ./pdns-recursor/recursor.yml:/etc/powerdns/recursor.yml:ro
+      - pdns-run:/var/run/pdns
     command:
-      # Override the default command to point to the correct config directory.
       - --config-dir=/etc/powerdns
       - --socket-dir=/var/run/pdns
 
   # 4. dnsdist Service (Public Entrypoint)
   dnsdist:
-    image: powerdns/dnsdist-19 # Use a recent stable tag
+    image: powerdns/dnsdist-19
     container_name: dnsdist
     restart: unless-stopped
     networks:
@@ -71,14 +64,11 @@ services:
       # Expose the dnsdist web interface/API port.
       - "8083:8083"
     volumes:
-      # Mount the dnsdist configuration file.
       - ./dnsdist/dnsdist.conf:/etc/dnsdist/dnsdist.conf:ro
     command:
-      # Override the command to specify the config file.
       - --config /etc/dnsdist/dnsdist.conf
 
 networks:
-  # Define a custom bridge network for inter-service communication and name resolution.
   pdns-net:
     driver: bridge
     ipam:
@@ -87,6 +77,6 @@ networks:
           gateway: 172.28.0.1
 
 volumes:
-  # Define a named volume for PostgreSQL data to persist across container restarts.
   postgres-data:
     name: postgres-data
+  pdns-run: {}
