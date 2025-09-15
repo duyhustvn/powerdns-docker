@@ -1,0 +1,85 @@
+services:
+  # 1. PostgreSQL Database Service
+  pdns-db:
+    image: postgres:16
+    container_name: pdns-db
+    restart: unless-stopped
+    networks:
+      - pdns-net
+    volumes:
+      # Mount a named volume for persistent database files.
+      - postgres-data:/var/lib/postgresql/data
+      # Mount the initialization script to create the PowerDNS schema on first run.
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    environment:
+      # These variables are used by the official Postgres image to initialize the database.
+      # Ensure these values match the gpgsql settings in pdns.conf.
+      - POSTGRES_DB=powerdns
+      - POSTGRES_USER=powerdns
+      - POSTGRES_PASSWORD=your_secure_password
+
+  # 2. PowerDNS Authoritative Server Service
+  pdns-auth:
+    image: powerdns/pdns-auth-master
+    container_name: pdns-auth
+    restart: unless-stopped
+    networks:
+      - pdns-net
+    volumes:
+      # Mount the configuration file into the container.
+      - ./pdns-auth/pdns.conf:/etc/powerdns/pdns.conf:ro
+    command:
+      # Override the default command to specify the config file and other parameters.
+      - --config-dir=/etc/powerdns
+      - --socket-dir=/var/run/pdns
+    ports:
+      # Expose the API port to the host for management (e.g., with PowerDNS-Admin).
+      - "8081:8081"
+
+  # 3. PowerDNS Recursor Service
+  pdns-recursor:
+    image: powerdns/pdns-recursor-51 # Use a recent stable tag
+    container_name: pdns-recursor
+    restart: unless-stopped
+    networks:
+      - pdns-net
+    depends_on:
+      - pdns-auth
+    volumes:
+      # Mount the recursor configuration file.
+      - ./pdns-recursor/recursor.conf:/etc/powerdns/recursor.conf:ro
+    command:
+      # Override the default command to point to the correct config directory.
+      - --config-dir=/etc/powerdns
+      - --socket-dir=/var/run/pdns
+
+  # 4. dnsdist Service (Public Entrypoint)
+  dnsdist:
+    image: powerdns/dnsdist-19 # Use a recent stable tag
+    container_name: dnsdist
+    restart: unless-stopped
+    networks:
+      - pdns-net
+    depends_on:
+      - pdns-recursor
+    ports:
+      # Map the standard DNS ports from the host to the container.
+      - "53:53/udp"
+      - "53:53/tcp"
+      # Expose the dnsdist web interface/API port.
+      - "8083:8083"
+    volumes:
+      # Mount the dnsdist configuration file.
+      - ./dnsdist/dnsdist.conf:/etc/dnsdist/dnsdist.conf:ro
+    command:
+      # Override the command to specify the config file.
+      - --config /etc/dnsdist/dnsdist.conf
+
+networks:
+  # Define a custom bridge network for inter-service communication and name resolution.
+  pdns-net:
+    driver: bridge
+
+volumes:
+  # Define a named volume for PostgreSQL data to persist across container restarts.
+  postgres-data:
