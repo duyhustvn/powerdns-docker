@@ -1,0 +1,12 @@
+incoming:
+  # Allow queries only from dnsdist (and other containers on the same Docker network).
+  allow_from: [ '172.16.0.0/12', '192.168.0.0/16', '172.28.0.0/24' ]
+  # Listen on all interfaces within the container.
+  listen: [ '0.0.0.0', '::' ]
+
+recursor:
+  # Forward queries for 'service.internal' to the authoritative server using static IP.
+  forward_zones:
+    - zone: 'service.internal.'
+      forwarders:
+        - '172.28.0.10:53'

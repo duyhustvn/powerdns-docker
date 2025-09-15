@@ -24,7 +24,9 @@ services:
     container_name: pdns-auth
     restart: unless-stopped
     networks:
-      - pdns-net
+      pdns-net:
+        # Assign a static IP to this container
+        ipv4_address: 172.28.0.10
     volumes:
       # Mount the configuration file into the container.
       - ./pdns-auth/pdns.conf:/etc/powerdns/pdns.conf:ro
@@ -47,7 +49,7 @@ services:
       - pdns-auth
     volumes:
       # Mount the recursor configuration file.
-      - ./pdns-recursor/recursor.conf:/etc/powerdns/recursor.conf:ro
+      - ./pdns-recursor/recursor.yml:/etc/powerdns/recursor.yml:ro
     command:
       # Override the default command to point to the correct config directory.
       - --config-dir=/etc/powerdns
@@ -79,6 +81,10 @@ networks:
   # Define a custom bridge network for inter-service communication and name resolution.
   pdns-net:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+          gateway: 172.28.0.1
 
 volumes:
   # Define a named volume for PostgreSQL data to persist across container restarts.
