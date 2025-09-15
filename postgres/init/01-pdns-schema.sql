@@ -3,13 +3,16 @@ CREATE TABLE domains (
   name                  VARCHAR(255) NOT NULL,
   master                VARCHAR(128) DEFAULT NULL,
   last_check            INT DEFAULT NULL,
-  type                  VARCHAR(6) NOT NULL,
-  notified_serial       INT DEFAULT NULL,
-  account               VARCHAR(40) CHARACTER SET 'utf8' DEFAULT NULL,
+  type                  TEXT NOT NULL,
+  notified_serial       BIGINT DEFAULT NULL,
+  account               VARCHAR(40) DEFAULT NULL,
+  options               TEXT DEFAULT NULL,
+  catalog               TEXT DEFAULT NULL,
   CONSTRAINT c_lowercase_name CHECK (((name)::TEXT = LOWER((name)::TEXT)))
 );
 
 CREATE UNIQUE INDEX name_index ON domains(name);
+CREATE INDEX catalog_idx ON domains(catalog);
 
 
 CREATE TABLE records (
@@ -30,16 +33,16 @@ CREATE TABLE records (
 );
 
 CREATE INDEX rec_name_index ON records(name);
-CREATE INDEX nametype_index ON records(name, type);
+CREATE INDEX nametype_index ON records(name,type);
 CREATE INDEX domain_id ON records(domain_id);
-CREATE INDEX recordorder ON records (domain_id, ordername);
+CREATE INDEX recordorder ON records (domain_id, ordername text_pattern_ops);
 
 
 CREATE TABLE supermasters (
-  ip                    VARCHAR(64) NOT NULL,
+  ip                    INET NOT NULL,
   nameserver            VARCHAR(255) NOT NULL,
-  account               VARCHAR(40) CHARACTER SET 'utf8' NOT NULL,
-  PRIMARY KEY (ip, nameserver)
+  account               VARCHAR(40) NOT NULL,
+  PRIMARY KEY(ip, nameserver)
 );
 
 
@@ -49,7 +52,7 @@ CREATE TABLE comments (
   name                  VARCHAR(255) NOT NULL,
   type                  VARCHAR(10) NOT NULL,
   modified_at           INT NOT NULL,
-  account               VARCHAR(40) CHARACTER SET 'utf8' DEFAULT NULL,
+  account               VARCHAR(40) DEFAULT NULL,
   comment               VARCHAR(65535) NOT NULL,
   CONSTRAINT domain_exists
   FOREIGN KEY(domain_id) REFERENCES domains(id)
@@ -62,31 +65,26 @@ CREATE INDEX comments_name_type_idx ON comments (name, type);
 CREATE INDEX comments_order_idx ON comments (domain_id, modified_at);
 
 
+CREATE TABLE domainmetadata (
+  id                    SERIAL PRIMARY KEY,
+  domain_id             INT REFERENCES domains(id) ON DELETE CASCADE,
+  kind                  VARCHAR(32),
+  content               TEXT
+);
+
+CREATE INDEX domainidmetaindex ON domainmetadata(domain_id);
+
+
 CREATE TABLE cryptokeys (
   id                    SERIAL PRIMARY KEY,
-  domain_id             INT NOT NULL,
+  domain_id             INT REFERENCES domains(id) ON DELETE CASCADE,
   flags                 INT NOT NULL,
   active                BOOL,
-  content               TEXT,
-  CONSTRAINT domain_exists
-  FOREIGN KEY(domain_id) REFERENCES domains(id)
-  ON DELETE CASCADE
+  published             BOOL DEFAULT TRUE,
+  content               TEXT
 );
 
 CREATE INDEX domainidindex ON cryptokeys(domain_id);
-
-
-CREATE TABLE domainmetadata (
-  id                    SERIAL PRIMARY KEY,
-  domain_id             INT NOT NULL,
-  kind                  VARCHAR(32),
-  content               TEXT,
-  CONSTRAINT domain_exists
-  FOREIGN KEY(domain_id) REFERENCES domains(id)
-  ON DELETE CASCADE
-);
-
-CREATE INDEX domainmetaidindex ON domainmetadata(domain_id);
 
 
 CREATE TABLE tsigkeys (

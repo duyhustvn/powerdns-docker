@@ -10,13 +10,13 @@ services:
       # Mount a named volume for persistent database files.
       - postgres-data:/var/lib/postgresql/data
       # Mount the initialization script to create the PowerDNS schema on first run.
-      - ./postgres/init:/docker-entrypoint-initdb.d
+      - ./postgres/init:/docker-entrypoint-initdb.d/
     environment:
       # These variables are used by the official Postgres image to initialize the database.
       # Ensure these values match the gpgsql settings in pdns.conf.
       - POSTGRES_DB=powerdns
       - POSTGRES_USER=powerdns
-      - POSTGRES_PASSWORD=your_secure_password
+      - POSTGRES_PASSWORD=powerdns
 
   # 2. PowerDNS Authoritative Server Service
   pdns-auth:
@@ -83,3 +83,4 @@ networks:
 volumes:
   # Define a named volume for PostgreSQL data to persist across container restarts.
   postgres-data:
+    name: postgres-data
