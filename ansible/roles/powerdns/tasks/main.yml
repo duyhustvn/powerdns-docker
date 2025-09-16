@@ -1,0 +1,71 @@
+---
+# tasks file for roles/powerdns
+
+- block:
+  - name: Create deployment folder
+    file:
+      path: '{{ deployment_dir }}'
+      state: directory
+      owner: root
+      group: root
+      mode: '0755'
+
+  - name: Copy docker-compose and config file to server
+    synchronize:
+      src: '{{ role_path }}/files/'
+      dest: '{{ deployment_dir }}'
+      recursive: yes
+      rsync_opts:
+        - "--chown=root:root"
+  tags: [ config ]
+
+- block:
+  - name: Pull docker images first
+    shell: |
+      docker compose pull
+    args:
+      chdir: '{{ deployment_dir }}'
+    register: result
+
+  - name: Result
+    debug:
+      var: result
+  tags: [ pull_docker_image ] 
+
+- block:
+  - name: Deploy postgresql first
+    shell: |
+      docker compose up -d pdns-db
+    args:
+      chdir: '{{ deployment_dir }}'
+    register: result
+
+  - name: Result
+    debug:
+      var: result
+  tags: [ deploy_postgresql ] 
+
+- block:
+  - name: Stop systemd-resolved   
+    shell: |
+      sudo systemctl stop systemd-resolved
+      sudo systemctl disable systemd-resolved
+      sudo systemctl unmask systemd-resolved
+    register: result
+  - name: Stop systemd-resolved result
+    debug:
+      var: result
+  tags: [ disable_systemd_resolved ]
+
+- block:
+  - name: Deploy postgresql first
+    shell: |
+      docker compose up -d
+    args:
+      chdir: '{{ deployment_dir }}'
+    register: result
+
+  - name: Result
+    debug:
+      var: result
+  tags: [ deploy_dns ] 

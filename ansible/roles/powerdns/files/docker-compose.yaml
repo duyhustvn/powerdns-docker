@@ -31,6 +31,8 @@ services:
       - --socket-dir=/var/run/pdns
     ports:
       - "8081:8081"
+    depends_on:
+      - pdns-db
 
   # 3. PowerDNS Recursor Service
   pdns-recursor:

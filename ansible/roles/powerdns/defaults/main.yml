@@ -1,0 +1,4 @@
+---
+# defaults file for roles/powerdns
+
+deployment_dir: '/u01/powerdns'
