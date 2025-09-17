@@ -9,4 +9,8 @@ recursor:
   forward_zones:
     - zone: 'service.internal.'
       forwarders:
-        - '172.28.0.10:53'
+        - '172.28.0.10:53' # static ip of pdns-auth
+
+logging: 
+  loglevel: 7 # https://doc.powerdns.com/recursor/yamlsettings.html#logging-loglevel
+  quiet: false # https://doc.powerdns.com/recursor/yamlsettings.html#logging-quiet

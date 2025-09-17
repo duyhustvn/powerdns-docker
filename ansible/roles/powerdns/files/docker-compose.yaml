@@ -40,7 +40,8 @@ services:
     container_name: pdns-recursor
     restart: unless-stopped
     networks:
-      - pdns-net
+      pdns-net:
+        ipv4_address: 172.28.0.11
     depends_on:
       - pdns-auth
     volumes:
